@@ -1,0 +1,64 @@
+{
+    "alpha": {
+        "desc": null,
+        "value": 0.9
+    },
+    "model": {
+        "desc": null,
+        "value": "SimpleModel(\n  (embed): Embedding(30189, 200, padding_idx=0)\n  (lstm): LSTM(200, 64, num_layers=2, batch_first=True, dropout=0.5)\n  (linear): Linear(in_features=128, out_features=1, bias=True)\n  (sigmoid): Sigmoid()\n  (dropout): Dropout(p=0.5, inplace=False)\n)"
+    },
+    "_wandb": {
+        "desc": null,
+        "value": {
+            "framework": "torch",
+            "cli_version": "0.9.4",
+            "is_jupyter_run": false,
+            "python_version": "3.6.10",
+            "is_kaggle_kernel": false
+        }
+    },
+    "epochs": {
+        "desc": null,
+        "value": 30
+    },
+    "dataset": {
+        "desc": null,
+        "value": "/home/rizalespe/research/_datasets/imdb/imdb_dataset.csv"
+    },
+    "shuffle": {
+        "desc": null,
+        "value": true
+    },
+    "n_output": {
+        "desc": null,
+        "value": 1
+    },
+    "batch_size": {
+        "desc": null,
+        "value": 64
+    },
+    "num_layers": {
+        "desc": null,
+        "value": 2
+    },
+    "hidden_size": {
+        "desc": null,
+        "value": 64
+    },
+    "print_every": {
+        "desc": null,
+        "value": 100
+    },
+    "learning_rate": {
+        "desc": null,
+        "value": 0.0001
+    },
+    "embedding_size": {
+        "desc": null,
+        "value": 200
+    },
+    "validation_split": {
+        "desc": null,
+        "value": 0.2
+    }
+}
