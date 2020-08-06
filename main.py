@@ -81,10 +81,13 @@ wandb.config.update({   "dataset":raw_csv,
                         "alpha":alpha
                         })
 
+
 total_step = len(train_loader)
 for epoch_id in range(epoch):
     
     for idx, (sentence, sentiment, length) in enumerate(train_loader):
+        num_correct_train = 0
+
         # send the data into the GPU device
         sentence, sentiment = sentence.to(device), sentiment.to(device)
 
@@ -94,6 +97,20 @@ for epoch_id in range(epoch):
         # forward
         model.train()
         prediction = model(sentence, length)
+
+        # Pengukuran akurasi training
+        # convert output probabilities to predicted class (0 or 1)
+        pred_train = torch.round(prediction.squeeze())  # rounds to the nearest integer
+
+        # compare predictions to true label
+        correct_tensor_train = pred_train.eq(sentiment.float().view_as(pred_train))
+        
+        if device == 'cpu':
+            correct_train = np.squeeze(correct_tensor_train.numpy()) 
+        else: 
+            correct_train = np.squeeze(correct_tensor_train.cpu().numpy())
+        num_correct_train += np.sum(correct_train)
+
         loss = criterion(prediction.squeeze(), sentiment.float())
     
         # backward & optimize
@@ -104,23 +121,42 @@ for epoch_id in range(epoch):
             # Validation section
             model.eval()
             valid_losses = []
+            valid_accuracy = []
+
             for idx_val, (val_sentence, val_sentiment, val_length) in enumerate(val_loader):
+                num_correct_val = 0
                 val_sentence, val_sentiment = val_sentence.to(device), val_sentiment.to(device)
                 
                 # forward
                 val_prediction = model(val_sentence, val_length)
+
+                # Pengukuran akurasi validasi
+                # convert output probabilities to predicted class (0 or 1)
+                pred_val = torch.round(val_prediction.squeeze())  # rounds to the nearest integer
+
+                # compare predictions to true label
+                correct_tensor_val = pred_val.eq(val_sentiment.float().view_as(pred_val))
+
+                if device == 'cpu':
+                    correct_val = np.squeeze(correct_tensor_val.numpy()) 
+                else: 
+                    correct_val = np.squeeze(correct_tensor_val.cpu().numpy())
+                
+                num_correct_val += np.sum(correct_val)
+                
                 val_loss = criterion(val_prediction.squeeze(), val_sentiment.float())
                 valid_losses.append(val_loss.item())
 
-            wandb.log({"Train Loss": loss.item(), "Valid Loss": np.mean(valid_losses)})
+            wandb.log({ "Train Loss": loss.item(), 
+                        "Valid Loss": np.mean(valid_losses),
+                        "Train Acc": num_correct_train/len(correct_train),
+                        "Valid Acc": num_correct_val/len(correct_val)
+                      })
 
             print("Epoch: {}/{}".format((epoch_id+1), epoch),
                 "Step: {}/{}".format(idx, total_step),
                 "Training Loss: {:.4f}".format(loss.item()),
-                "Validation Loss: {:.4f}".format(np.mean(valid_losses)))
-
-
-
-
-
-
+                "Validation Loss: {:.4f}".format(np.mean(valid_losses)),
+                "Training Accuracy:  {:.4f}".format(num_correct_train/len(correct_train)),
+                "Validation Accuracy:  {:.4f}".format(num_correct_val/len(correct_val))
+                )
