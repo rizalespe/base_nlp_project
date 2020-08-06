@@ -3,19 +3,26 @@ import spacy
 from collections import Counter
 from tqdm import tqdm
 import pickle
+from preprocess import clean
 
 threshold = 10
-
-tqdm.pandas(desc='Progress')
+cleansing = False
 # load spacy tokenizer
 nlp = spacy.load('en_core_web_sm',disable=['parser', 'tagger', 'ner'])
 
 # load the dataset
-df = pd.read_csv('sentiment-analysis-dataset.csv', error_bad_lines=False) 
-sentence_corpus = df.SentimentText.progress_apply(lambda x: x.strip())
+# sentiment-analysis-dataset.csv
+df = pd.read_csv('imdb_dataset.csv', error_bad_lines=False)
+
+if cleansing:
+    tqdm.pandas(desc='String cleansing...') 
+    df.SentimentText = df.review.progress_apply(lambda x: clean(x))
+
+tqdm.pandas(desc='Removing empty string...') 
+sentence_corpus = df.review.progress_apply(lambda x: x.strip())
 
 words = Counter()
-
+tqdm.pandas(desc='Index generating...') 
 for sentence in tqdm(sentence_corpus.values):
     words.update(w.text.lower() for w in nlp(sentence))
 
