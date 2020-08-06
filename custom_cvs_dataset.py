@@ -5,13 +5,15 @@ import spacy
 import pandas as pd
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader, random_split
+import os.path
 
-tqdm.pandas(desc='Progress')
+from preprocess import clean
+
 # load spacy tokenizer
 nlp = spacy.load('en_core_web_sm',disable=['parser', 'tagger', 'ner'])
 
 class TextDataset(Dataset):
-    def __init__(self, raw_csv, vocab_file):
+    def __init__(self, raw_csv, vocab_file, cleansing = False):
         # Load vocabulary wrapper
         with open(vocab_file, 'rb') as f:
             vocab = pickle.load(f)
@@ -20,9 +22,27 @@ class TextDataset(Dataset):
 
         # raw data from csv file
         raw_data = pd.read_csv(raw_csv, error_bad_lines=False)
-        self.sentiment = raw_data.Sentiment
-        self.sentence_text = raw_data.SentimentText.progress_apply(lambda x: x.strip())
-        self.sentence_idx = raw_data.SentimentText.progress_apply(self.indexer)
+        self.sentiment = raw_data.sentiment
+        raw_data.loc[raw_data.sentiment=='positive', 'sentiment'] = 1
+        raw_data.loc[raw_data.sentiment=='negative', 'sentiment'] = 0
+
+        if cleansing:
+            tqdm.pandas(desc='Cleaning empty spaces...') 
+            raw_data.review = raw_data.review.progress_apply(lambda x: clean(x))
+
+        tqdm.pandas(desc='Removing empty string...')
+        self.sentence_text = raw_data.review.progress_apply(lambda x: x.strip())        
+        
+        # Load or generate temporary word index
+        tqdm.pandas(desc='Converting word to index...')
+        if os.path.isfile('sentence_idx_temp.pkl'):
+            with open('sentence_idx_temp.pkl', 'rb') as f:
+                self.sentence_idx = pickle.load(f)
+        else:
+            self.sentence_idx = raw_data.review.progress_apply(self.indexer)
+            with open('sentence_idx_temp.pkl', 'wb') as f:
+                pickle.dump(self.sentence_idx, f)
+        
         
     def __len__(self):
         return len(self.sentence_text)
@@ -48,12 +68,11 @@ def collate_fn(data):
     lengths = [len(document) for document in sentence_source]
     sentence = torch.zeros(len(sentence_source), max(lengths)).long()
     
-
     for i, cap in enumerate(sentence_source):
         end = lengths[i]
         sentence[i, :end] = cap[:end]  
 
-    return sentence, sentiment, lengths
+    return sentence, torch.LongTensor(sentiment), lengths
 
 def data_loader(raw_csv, vocab_file, validation_split, batch_size = 64, shuffle = True):
 
